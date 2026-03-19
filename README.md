@@ -39,24 +39,23 @@
 ##  How to Run Locally
 
 ### 1. Install dependencies
-```bash
 pip install fastapi uvicorn requests
 
 ### 2. Install and start Ollama (IMPORTANT)
 
 Make sure Ollama is installed on your system.
 
-3.Run the AI model:
+###  3.Run the AI model:
 ollama run phi
-4.
+ ### 4. 
 
 cd backend
 uvicorn main:app --reload
-5.
+ ### 5.
 cd frontend
 python -m http.server 5500
 
-6.website working
+### 6.website working
 http://127.0.0.1:5500/index.html
 
 
