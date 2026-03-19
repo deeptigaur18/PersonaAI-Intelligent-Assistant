@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Deepti AI Assistant</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: "Segoe UI", sans-serif;
+            display: flex;
+            height: 100vh;
+            background: linear-gradient(120deg, #2563eb, #9333ea);
+            color: white;
+        }
+        
+        .sidebar {
+            width: 220px;
+            background: #020617;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .sidebar button {
+            padding: 10px;
+            border: none;
+            background: #1e293b;
+            color: white;
+            cursor: pointer;
+            border-radius: 6px;
+        }
+        
+        .sidebar button:hover {
+            background: #334155;
+        }
+        
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            padding: 15px;
+            text-align: center;
+            font-size: 20px;
+            background: #1e293b;
+        }
+        
+        .chat-box {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+        }
+        
+        .message {
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 10px;
+            max-width: 70%;
+        }
+        
+        .user {
+            background: #2563eb;
+            margin-left: auto;
+        }
+        
+        .bot {
+            background: #334155;
+        }
+        
+        .typing {
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0% {
+                opacity: 0.2;
+            }
+            50% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0.2;
+            }
+        }
+        
+        .input-area {
+            display: flex;
+            padding: 10px;
+            background: #1e293b;
+        }
+        
+        input {
+            flex: 1;
+            padding: 10px;
+            border-radius: 6px;
+            border: none;
+        }
+        
+        button.send {
+            margin-left: 10px;
+            padding: 10px;
+            background: #22c55e;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        
+        button.play {
+            margin-left: 10px;
+            padding: 10px;
+            background: #f59e0b;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="sidebar">
+        <button onclick="clearChat()">New Chat</button>
+        <button onclick="downloadChat()">Download Chat</button>
+    </div>
+
+    <div class="main">
+
+        <div class="header">
+            Deepti AI Assistant
+        </div>
+
+        <div id="chat" class="chat-box"></div>
+
+        <div class="input-area">
+            <input id="message" placeholder="Type your message..." />
+            <button class="send" onclick="sendMessage()">Send</button>
+            <button class="play" onclick="playLast()">Play Voice</button>
+        </div>
+
+    </div>
+
+    <script>
+        let lastResponse = "";
+
+        // Ensure voices load
+        window.speechSynthesis.onvoiceschanged = () => {};
+
+        // Welcome message
+        window.onload = function() {
+            addMessage("Hello, I am Deepti AI. How can I help you today?", "bot");
+        };
+
+        // Enter key
+        document.getElementById("message").addEventListener("keypress", function(e) {
+            if (e.key === "Enter") sendMessage();
+        });
+
+        // Send message
+        async function sendMessage() {
+            let input = document.getElementById("message");
+            let msg = input.value.trim();
+
+            if (!msg) return;
+
+            addMessage(msg, "user");
+            input.value = "";
+
+            let typing = addMessage("...", "bot typing");
+
+            try {
+                let res = await fetch("http://127.0.0.1:8000/chat", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        message: msg
+                    })
+                });
+
+                let data = await res.json();
+
+                typing.remove();
+                addMessage(data.response, "bot");
+
+                lastResponse = data.response;
+
+            } catch {
+                typing.remove();
+                addMessage("Server error. Please try again.", "bot");
+            }
+        }
+
+        // Add message
+        function addMessage(text, type) {
+            let chat = document.getElementById("chat");
+            let div = document.createElement("div");
+
+            div.className = "message " + type;
+            div.innerText = text;
+
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+
+            return div;
+        }
+
+        // Clear chat
+        function clearChat() {
+            document.getElementById("chat").innerHTML = "";
+        }
+
+        // Download chat
+        function downloadChat() {
+            let messages = document.querySelectorAll(".message");
+            let text = "";
+
+            messages.forEach(m => text += m.innerText + "\n");
+
+            let blob = new Blob([text], {
+                type: "text/plain"
+            });
+            let a = document.createElement("a");
+
+            a.href = URL.createObjectURL(blob);
+            a.download = "chat.txt";
+            a.click();
+        }
+
+        // 🔊 ONLY FEMALE VOICE (FORCED)
+        function playLast() {
+            if (!lastResponse) return;
+
+            let speech = new SpeechSynthesisUtterance(lastResponse);
+            let voices = window.speechSynthesis.getVoices();
+
+            let female = voices.find(v =>
+                v.name.includes("Zira") ||
+                v.name.includes("Samantha") ||
+                v.name.includes("Google UK English Female")
+            );
+
+            if (female) speech.voice = female;
+
+            speech.lang = "en-US";
+            speech.pitch = 1.2;
+            speech.rate = 1;
+
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(speech);
+        }
+    </script>
+
+</body>
+
+</html>
